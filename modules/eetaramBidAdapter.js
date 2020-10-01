@@ -40,7 +40,7 @@ function buildOpenRTBRequestParams (
     }
   }
   return {
-    id: '' + new Date().getTime(),
+    id: new Date().getTime(),
     imp: buildImpressionObject(validBidRequests),
     site: {
       page: referer || window.location.href,
