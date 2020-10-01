@@ -8,6 +8,7 @@ const ENDPOINT_URL = 'https://dmx.districtm.io/b/v1';
 
 /**
  * Purpose: build OpenRTB request template
+ *
  * @param referer
  * @param gdprApplies
  * @param uspConsent
@@ -20,6 +21,24 @@ function buildOpenRTBRequestParams (
   uspConsent,
   consentString,
   validBidRequests) {
+  let regs = {}
+  if (config.getConfig('coppa') === true) {
+    regs.coppa = 1
+  }
+  if (gdprApplies) {
+    regs.ext = regs.ext || {}
+    regs.ext = {
+      ...regs.ext,
+      gdpr: 1
+    }
+  }
+  if (uspConsent) {
+    regs.ext = regs.ext || {}
+    regs.ext = {
+      ...regs.ext,
+      us_privacy: uspConsent
+    }
+  }
   return {
     id: '' + new Date().getTime(),
     imp: buildImpressionObject(validBidRequests),
@@ -36,29 +55,25 @@ function buildOpenRTBRequestParams (
       }
     },
     ext: {},
-    regs: {
-      coppa: config.getConfig('coppa') === true ? 1 : 0,
-      ext: {
-        gdpr: gdprApplies ? 1 : 0,
-        us_privacy: uspConsent
-      }
-    }
+    regs
   };
 }
 
 /**
  * Purpose: To filter banner ads from validBidRequests
+ *
  * @param bid
  * @returns {*}
  */
 function isBannerAd(bid) {
   const {mediaTypes: { banner }} = bid;
   return typeof banner === 'object'
-    ? banner.sizes && utils.isArray(banner.sizes)
+    ? !!(banner.sizes && utils.isArray(banner.sizes))
     : false
 }
 
 /**
+ * Purpose: create size related attributes for the banner
  *
  * @param sizes
  * @returns {{w: number, h: number}|*}
@@ -78,6 +93,7 @@ function formatSizeAttributes(sizes) {
 
 /**
  * Purpose: Build impressions object that comply with openRTB policies
+ *
  * @param validBidRequests
  * @returns {*}
  */
@@ -97,6 +113,7 @@ function buildImpressionObject(validBidRequests) {
       }
     })
 }
+
 export const spec = {
   code: BIDDER_CODE,
   supportedMediaTypes: [BANNER],
@@ -107,25 +124,50 @@ export const spec = {
    */
   isBidRequestValid: (bid) => !!(bid.params && bid.params.placementId),
   buildRequests: (validBidRequests, bidderRequest) => {
-    // loop through validBidRequests and return something
     const {gdprConsent: {gdprApplies, consentString} = {}, uspConsent, refererInfo: {referer} = {}} = bidderRequest
-    const bidRequestPayload = buildOpenRTBRequestParams(referer, gdprApplies, uspConsent, consentString)
+    const bidRequestPayload = buildOpenRTBRequestParams(referer, gdprApplies, uspConsent, consentString, validBidRequests)
     return {
       method: 'POST',
       url: ENDPOINT_URL,
       data: bidRequestPayload
     };
   },
+  /**
+   * Purpose : Parse the server response and create a bidResponse object containing one or more bids
+   *
+   * @param serverResponse
+   * @param request
+   * @returns {*[]}
+   */
   interpretResponse: (serverResponse, request) => {
-    // parse the serverResponse and create a bidResponse object containing one or more bids
     return []
   },
+  /**
+   *
+   * @param syncOptions
+   * @param serverResponses
+   * @param gdprConsent
+   * @param uspConsent
+   * @returns {[]}
+   */
   getUserSyncs: (syncOptions, serverResponses, gdprConsent, uspConsent) => {
     const syncs = [];
     return syncs;
   },
-  onTimeout: (timeoutData) => {},
-  onBidWon: (bid) => {},
-  onSetTargeting: (bid) => {}
+/*  onTimeout: (timeoutData) => {
+    // when an adpater timed out for an auction.
+  },
+  onBidWon: (bid) => {
+    // when a bid from the adapter won the auction.
+  },
+  onSetTargeting: (bid) => {
+    // when the adserver targeting has been set for a bid from the adapter.
+  } */
 }
 registerBidder(spec);
+export {
+  buildOpenRTBRequestParams,
+  buildImpressionObject,
+  isBannerAd,
+  formatSizeAttributes
+}
