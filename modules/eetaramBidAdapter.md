@@ -28,21 +28,6 @@ Module that connects to Eetaram's demand sources
                     }
                 }
             ]
-        },{
-            code: 'test-div',
-            mediaTypes: {
-                banner: {
-                    sizes: [[320, 50]],   // a mobile size
-                }
-            },
-            bids: [
-                {
-                    bidder: "eetaram",
-                    params: {
-                        placementId: 67890
-                    }
-                }
-            ]
         }
     ];
 ```

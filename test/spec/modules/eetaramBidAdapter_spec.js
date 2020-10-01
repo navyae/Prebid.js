@@ -257,7 +257,45 @@ describe('Eetaram Adapter', () => {
     })
   });
 
-  describe('interpretResponse', () => {});
+  describe('interpretResponse', () => {
+    let serverResponse = {}
+    beforeEach(() => {
+      serverResponse.body = {'id': 1601553106696, 'cur': 'USD', 'seatbid': [{'bid': [{'id': '21642c809eeec4', 'impid': '21642c809eeec4', 'dealid': 'dmx-deal-hp-24', 'price': 12.01, 'adm': "<img src='https://via.placeholder.com/300x250.png?text=dmx+2.0+300x250' height='250' width='300'/>", 'crid': '2889617267', 'w': 300, 'h': 250}, {'id': '21642c809eeec4', 'impid': '21642c809eeec4', 'dealid': 'dmx-deal-hp-25', 'price': 12.01, 'adm': "<img src='https://via.placeholder.com/300x250.png?text=dmx+2.0+300x250' height='250' width='300'/>", 'crid': '4699417612', 'w': 300, 'h': 250}]}]}
+    })
 
-  describe('getUserSyncs', () => {});
+    it('should return valid bid Response', () => {
+      let bidResponse = interpretResponse(serverResponse)
+      expect(bidResponse).to.be.an('array').of.length(2)
+      expect(bidResponse[0]).to.have.all.keys('requestId', 'cpm', 'currency', 'width', 'height', 'creativeId', 'dealId', 'netRevenue', 'ttl', 'ad', 'meta')
+    })
+    it('should use id for creativeId if bid[0].crid is undefined ', () => {
+      delete serverResponse.body.seatbid[0].bid[0].crid
+      let bidResponse = interpretResponse(serverResponse)
+      expect(bidResponse[0].creativeId).to.equals(serverResponse.body.seatbid[0].bid[0].id)
+    })
+    it('should have cpm set to 0.00 if bid[0].price is undefined ', () => {
+      delete serverResponse.body.seatbid[0].bid[0].price
+      let bidResponse = interpretResponse(serverResponse)
+      expect(bidResponse[0].cpm).to.equals('0.00')
+    })
+    it('should return empty bid Response if seatbid.bid is undefined ', () => {
+      delete serverResponse.body.seatbid[0].bid
+      let bidResponse = interpretResponse(serverResponse)
+      expect(bidResponse).to.be.an('array').that.is.empty
+    })
+    it('should return empty bid Response if request doesn\'t have bids', () => {
+      serverResponse = {}
+      let bidResponse = interpretResponse(serverResponse)
+      expect(bidResponse).to.be.an('array').that.is.empty
+    })
+  });
+
+  describe('getUserSyncs', () => {
+    let syncOptions, serverResponses, gdprConsent, uspConsent
+    beforeEach(() => {
+    })
+    it('should return empty array', () => {
+      expect(getUserSyncs(syncOptions, serverResponses, gdprConsent, uspConsent)).to.be.an('array').that.is.empty
+    })
+  });
 })

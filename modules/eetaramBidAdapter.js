@@ -4,7 +4,7 @@ import { config } from '../src/config.js';
 import { BANNER } from '../src/mediaTypes.js';
 
 const BIDDER_CODE = 'eetaram';
-const ENDPOINT_URL = 'https://dmx.districtm.io/b/v1';
+const ENDPOINT_URL = 'https://demo.arrepiblik.com/dmx2';
 
 /**
  * Purpose: build OpenRTB request template
@@ -47,7 +47,14 @@ function buildOpenRTBRequestParams (
       ref: window.document.referrer,
       publisher: {}
     },
-    device: {},
+    device: {
+      ua: navigator.userAgent,
+      js: 1,
+      dnt: (navigator.doNotTrack == 'yes' || navigator.doNotTrack == '1' || navigator.msDoNotTrack == '1') ? 1 : 0,
+      h: screen.height,
+      w: screen.width,
+      language: navigator.language
+    },
     at: 1,
     user: {
       ext: {
@@ -132,6 +139,7 @@ export const spec = {
       data: bidRequestPayload
     };
   },
+
   /**
    * Purpose : Parse the server response and create a bidResponse object containing one or more bids
    *
@@ -140,8 +148,34 @@ export const spec = {
    * @returns {*[]}
    */
   interpretResponse: (serverResponse, request) => {
-    return []
+    const {body: {seatbid, cur} = {}} = serverResponse
+    if (!seatbid || !utils.isArray(seatbid)) {
+      return []
+    };
+    const [firstBid] = seatbid;
+    const {bid} = firstBid;
+    if (!bid || (!utils.isArray(bid) && bid.length > 0)) {
+      return []
+    }
+    let bidResponses = bid.map((eachBid) => {
+      const {adm, crid, dealid, h, id, impid, price, w, meta = {}} = eachBid
+      return {
+        requestId: impid,
+        cpm: (parseFloat(price) || 0).toFixed(2),
+        currency: cur,
+        width: w,
+        height: h,
+        creativeId: crid || id,
+        dealId: dealid,
+        netRevenue: true,
+        ttl: 300,
+        ad: adm,
+        meta
+      }
+    });
+    return bidResponses;
   },
+
   /**
    *
    * @param syncOptions
@@ -151,9 +185,31 @@ export const spec = {
    * @returns {[]}
    */
   getUserSyncs: (syncOptions, serverResponses, gdprConsent, uspConsent) => {
-    const syncs = [];
+    const syncs = []
+    /**
+     * Code from prebid document
+     */
+    /*    let gdprParams;
+        if (typeof gdprConsent.gdprApplies === 'boolean') {
+          gdprParams = `gdpr=${Number(gdprConsent.gdprApplies)}&gdpr_consent=${gdprConsent.consentString}`;
+        } else {
+          gdprParams = `gdpr_consent=${gdprConsent.consentString}`;
+        }
+        if (syncOptions.iframeEnabled) {
+          syncs.push({
+            type: 'iframe',
+            url: '//acdn.adnxs.com/ib/static/usersync/v3/async_usersync.html?' + gdprParams
+          });
+        }
+        if (syncOptions.pixelEnabled && serverResponses.length > 0) {
+          syncs.push({
+            type: 'image',
+            url: serverResponses[0].body.userSync.url + gdprParams
+          });
+        } */
     return syncs;
   },
+
 /*  onTimeout: (timeoutData) => {
     // when an adpater timed out for an auction.
   },
